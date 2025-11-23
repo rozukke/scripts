@@ -1,4 +1,4 @@
-# Generate example sentences for Anki cards. The best dictionary I have doesn't have examples,
+# Get example sentences for Anki cards from Tatoeba. The best dictionary I have doesn't have examples,
 # and most of my sources aren't super valid for sentence mining, so we make do. This rewrites
 # ALL sentences, so could be a decent refresh for a deck once in a while. Also includes the
 # sentence in traditional Chinese.
@@ -12,6 +12,7 @@ from pypinyin import lazy_pinyin, Style
 from tatoeba_ingest import query
 
 cc = OpenCC('s2t')
+cc_t2s = OpenCC('t2s')
 
 ANKI_ADDR = "http://127.0.0.1:8765"
 DECK_NAME = "Personal"
@@ -19,7 +20,6 @@ DECK_NAME = "Personal"
 def get_example_sentence(word):
     results = query(word)
     if results:
-        print(f"{results[0]}")
         return results[0]
     else:
         print(f"Could not find example sentence for {word}")
@@ -90,6 +90,12 @@ for i, note_id in enumerate(notes):
     example_trans = example_query["eng"]
     pinyin_str = to_pinyin(example)
     print(f"   Example: {example} / {pinyin_str} / {example_trans}")
+
+    # Tatoeba examples can be traditional
+    trad = cc.convert(example)
+    if trad == example:
+        example = cc_t2s.convert(example)
+
     requests.post(ANKI_ADDR, json={
         "action": "updateNoteFields",
         "version": 6,
@@ -98,7 +104,7 @@ for i, note_id in enumerate(notes):
                 "id": note_id,
                 "fields": {
                     "Sentence": example,
-                    "Sentence Traditional": cc.convert(example),
+                    "Sentence Traditional": trad,
                     "Sentence Pinyin": pinyin_str,
                     "Sentence Translation": example_trans,
                 }
